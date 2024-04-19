@@ -3,6 +3,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Scanner;
 
 public class MarkerDetector {
 
@@ -12,6 +13,17 @@ public class MarkerDetector {
     }
 
     private static BufferedImage resizeImage(BufferedImage image, int targetWidth, int targetHeight) {
+        int originalWidth = image.getWidth();
+        int originalHeight = image.getHeight();
+
+        double aspectRatio = (double) originalWidth / originalHeight;
+
+        if (originalWidth > originalHeight) {
+            targetHeight = (int) (targetWidth / aspectRatio);
+        } else {
+            targetWidth = (int) (targetHeight * aspectRatio);
+        }
+
         Image tmp = image.getScaledInstance(targetWidth, targetHeight, Image.SCALE_SMOOTH);
         BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = resizedImage.createGraphics();
@@ -23,8 +35,9 @@ public class MarkerDetector {
     public static BufferedImage processImage(BufferedImage image) {
 
         BufferedImage grayImage = convertToGrayscale(image);
+        BufferedImage gaussianImage = applyGaussianBlur(grayImage);
 
-        return grayImage;
+        return gaussianImage;
     }
 
     private static BufferedImage convertToGrayscale(BufferedImage image) {
@@ -48,10 +61,42 @@ public class MarkerDetector {
         return grayImage;
     }
 
+    private static BufferedImage applyGaussianBlur(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        BufferedImage blurredImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+
+        double[][] kernel = {
+                {1.0 / 16, 1.0 / 8, 1.0 / 16},
+                {1.0 / 8, 1.0 / 4, 1.0 / 8},
+                {1.0 / 16, 1.0 / 8, 1.0 / 16}
+        };
+
+        for (int y = 1; y < height - 1; y++) {
+            for (int x = 1; x < width - 1; x++) {
+                double sum = 0.0;
+                for (int i = -1; i <= 1; i++) {
+                    for (int j = -1; j <= 1; j++) {
+                        int pixel = image.getRGB(x + i, y + j) & 0xFF;
+                        sum += kernel[i + 1][j + 1] * pixel;
+                    }
+                }
+                int blurredPixel = (int) Math.round(sum);
+                blurredImage.setRGB(x, y, blurredPixel << 16 | blurredPixel << 8 | blurredPixel);
+            }
+        }
+
+        return blurredImage;
+    }
+
     public static void main(String[] args) {
 
         try {
-            BufferedImage image = readImage("input.jpg");
+            Scanner s = new Scanner(System.in);
+            System.out.print("Give unprocessed file name: ");
+            String fileName = s.nextLine();
+            BufferedImage image = readImage(fileName);
 
             int width = image.getWidth();
             int height = image.getHeight();
@@ -63,6 +108,13 @@ public class MarkerDetector {
 
             BufferedImage resizedImage = resizeImage(image, targetWidth, targetHeight);
             BufferedImage processedImage = processImage(resizedImage);
+
+            File outputImageFile = new File("processedImage.jpg");
+
+            ImageIO.write(processedImage, "jpg", outputImageFile);
+
+            System.out.println("Processed image saved successfully!");
+
 
         } catch (IOException e) {
             e.printStackTrace();
