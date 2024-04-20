@@ -36,6 +36,7 @@ public class MarkerDetector {
 
         BufferedImage grayImage = convertToGrayscale(image);
         BufferedImage gaussianImage = applyGaussianBlur(grayImage);
+        BufferedImage sobelImage[] = applySobelOperator(gaussianImage);
 
         return gaussianImage;
     }
@@ -88,6 +89,49 @@ public class MarkerDetector {
         }
 
         return blurredImage;
+    }
+
+    private static BufferedImage[] applySobelOperator(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        BufferedImage gradientMagnitudeImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        BufferedImage gradientDirectionImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+
+        // Sobel kernels
+        int[][] sobelX = {
+                {-1, 0, 1},
+                {-2, 0, 2},
+                {-1, 0, 1}
+        };
+
+        int[][] sobelY = {
+                {-1, -2, -1},
+                {0, 0, 0},
+                {1, 2, 1}
+        };
+
+        for (int y = 1; y < height - 1; y++) {
+            for (int x = 1; x < width - 1; x++) {
+                int gx = 0;
+                int gy = 0;
+                for (int i = -1; i <= 1; i++) {
+                    for (int j = -1; j <= 1; j++) {
+                        int pixel = image.getRGB(x + i, y + j) & 0xFF;
+                        gx += sobelX[i + 1][j + 1] * pixel;
+                        gy += sobelY[i + 1][j + 1] * pixel;
+                    }
+                }
+                int gradientMagnitude = (int) Math.round(Math.sqrt(gx * gx + gy * gy));
+                gradientMagnitudeImage.setRGB(x, y, gradientMagnitude << 16 | gradientMagnitude << 8 | gradientMagnitude);
+
+                double gradientDirection = Math.atan2(gy, gx);
+                int direction = (int) Math.round(Math.toDegrees(gradientDirection));
+                gradientDirectionImage.setRGB(x, y, direction << 16 | direction << 8 | direction);
+            }
+        }
+
+        return new BufferedImage[]{gradientMagnitudeImage, gradientDirectionImage};
     }
 
     public static void main(String[] args) {
