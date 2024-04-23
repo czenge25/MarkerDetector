@@ -152,6 +152,25 @@ public class MarkerDetector {
         return new BufferedImage[]{gradientMagnitudeImage, gradientDirectionImage};
     }
 
+    public static BufferedImage applyThreshold(BufferedImage grayscaleImage, int threshold) {
+        BufferedImage binaryImage = new BufferedImage(grayscaleImage.getWidth(), grayscaleImage.getHeight(), BufferedImage.TYPE_BYTE_BINARY);
+        for (int y = 0; y < grayscaleImage.getHeight(); y++) {
+            StringBuilder row = new StringBuilder();
+            for (int x = 0; x < grayscaleImage.getWidth(); x++) {
+                int pixel = grayscaleImage.getRGB(x, y) & 0xFF;
+                if (pixel < threshold) {
+                    binaryImage.setRGB(x, y, Color.BLACK.getRGB());
+                    row.append("#"); // Print '#' for black pixels
+                } else {
+                    binaryImage.setRGB(x, y, Color.WHITE.getRGB());
+                    row.append("."); // Print '.' for white pixels
+                }
+            }
+            System.out.println(row); // Print the row of pixels
+        }
+        return binaryImage;
+    }
+
     // Main method to run the program
     public static void main(String[] args) {
 
@@ -173,6 +192,9 @@ public class MarkerDetector {
             BufferedImage resizedImage = resizeImage(image, targetWidth, targetHeight);
             // Processing the resized image
             BufferedImage processedImage = processImage(resizedImage);
+
+            // Print
+            System.out.println(applyThreshold(processedImage, 128));
 
             // Saving the processed image to file
             File outputImageFile = new File("processedImage.jpg");
